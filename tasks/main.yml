@@ -1,0 +1,105 @@
+---
+
+# Identify master, first of the group list
+
+
+# Install RabbitMQ
+
+- name: Install rabbitmq
+  yum: name="{{ item }}" state=present
+  with_items:
+    - rabbitmq-server
+    - apg
+    - jq
+    - curl
+    - python-httplib2
+
+
+    ## apg -a 1 -M C  -n 1 -m 20
+    #- name: Push cookie
+    #  copy:
+    #    content: "{{ rabbitmq_cookie }}"
+    #    dest: /var/lib/rabbitmq/.erlang.cookie
+    #    owner: rabbitmq
+    #    group: rabbitmq
+    #    mode: 0400
+    #  notify:
+    #    - Restart rabbitmq
+
+- name: Install RabbitMQ plugins
+  rabbitmq_plugin: 
+    name: "{{ item }}"
+    state: enabled
+  with_items: rabbitmq_plugins
+  notify:
+  - Restart rabbitmq service
+
+- name: Flush handlers
+  meta: flush_handlers 
+
+- name: Run rabbitmq service
+  service:
+    name: rabbitmq-server
+    enabled: yes 
+    state: started
+
+
+
+# Install CLI management
+
+- name: Install rabbitmqadmin CLI tool
+  get_url:
+    dest: /usr/local/bin/rabbitmqadmin
+    url: http://0:15672/cli/rabbitmqadmin
+    validate_certs: no
+
+- name: Setup the proper permission for rabbitmqadmin binary
+  file:
+    path: /usr/local/bin/rabbitmqadmin
+    mode: 0740
+    owner: root
+
+- name: Configure the rabbitmqadmin client
+  ini_file:
+    dest: /root/.rabbitmqadmin.conf
+    state: present
+    option: "{{ item.option }}"
+    value: "{{ item.value }}"
+    owner: root
+    mode: 600
+    section: localhost
+  with_items:
+    - option: username
+      value: admin
+    - option: password
+      value: admin
+    - option: hostname
+      value: 127.0.0.1
+    - option: port
+      value: 15672
+
+- name: Install rabbitmqadmin bash completion
+  shell: rabbitmqadmin --bash-completion > /etc/bash_completion.d/rabbitmq.bash
+  args:
+    chdir: /usr/local/bin/
+    creates: /etc/bash_completion.d/rabbitmq.bash
+
+# Remove default user and replace it by admin
+
+- name: Create admin user
+  rabbitmq_user:
+    user: admin
+    password: admin
+    tags: administrator
+    vhost: /
+    configure_priv: .*
+    read_priv: .*
+    write_priv: .*
+    state: present
+
+- name: Delete guest user
+  rabbitmq_user:
+    user: guest
+    state: absent
+
+

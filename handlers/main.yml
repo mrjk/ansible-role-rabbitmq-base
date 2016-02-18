@@ -1,0 +1,15 @@
+---
+# handlers file for rabbitmq-base
+
+- name: Start rabbitmq service
+  service:
+    name: rabbitmq-server
+    enabled: yes 
+    state: started
+
+- name: Restart rabbitmq service
+  service:
+    name: rabbitmq-server
+    enabled: yes 
+    state: restarted
+

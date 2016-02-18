@@ -1,0 +1,5 @@
+---
+
+# See https://www.rabbitmq.com/plugins.html
+rabbitmq_plugins:
+  - rabbitmq_management
